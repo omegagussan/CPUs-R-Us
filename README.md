@@ -42,3 +42,12 @@ curl -s -H "X-User-Id: user-1" http://localhost:8082/cart
 * **Client-Side Resolution**: The Cart API acts as an aggregator. It consumes the Product API at runtime via a generated Go HTTP client to resolve product metadata and calculate prices.
 * **CORS Middleware**: Implemented standard CORS headers on the Cart API to allow direct integration with frontend websites.
 * **In-Memory Store**: Cart items are stored in a thread-safe Go map for simplicity in this PoC.
+
+---
+
+## 🧪 Running Integration Tests
+
+You can run the end-to-end integration tests using standard Go testing tools:
+```bash
+go test -v ./tests/...
+```
