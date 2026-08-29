@@ -10,12 +10,6 @@ import (
 	"github.com/ogen-go/ogen/uri"
 )
 
-var (
-	rn2AllowedHeaders = map[string]string{
-		"GET": "X-Api-Key",
-	}
-)
-
 func (s *Server) cutPrefix(path string) (string, bool) {
 	prefix := s.cfg.Prefix
 	if prefix == "" {
@@ -55,40 +49,66 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		switch elem[0] {
-		case '/': // Prefix: "/hello/"
+		case '/': // Prefix: "/products"
 
-			if l := len("/hello/"); len(elem) >= l && elem[0:l] == "/hello/" {
+			if l := len("/products"); len(elem) >= l && elem[0:l] == "/products" {
 				elem = elem[l:]
 			} else {
 				break
 			}
 
-			// Param: "name"
-			// Leaf parameter, slashes are prohibited
-			idx := strings.IndexByte(elem, '/')
-			if idx >= 0 {
-				break
-			}
-			args[0] = elem
-			elem = ""
-
 			if len(elem) == 0 {
-				// Leaf node.
 				switch r.Method {
 				case "GET":
-					s.handleSayHelloRequest([1]string{
-						args[0],
-					}, elemIsEscaped, w, r)
+					s.handleListProductsRequest([0]string{}, elemIsEscaped, w, r)
 				default:
 					s.notAllowed(w, r, notAllowedParams{
 						allowedMethods: "GET",
-						allowedHeaders: rn2AllowedHeaders,
+						allowedHeaders: nil,
 						acceptPost:     "",
 						acceptPatch:    "",
 					})
 				}
 
 				return
+			}
+			switch elem[0] {
+			case '/': // Prefix: "/"
+
+				if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				// Param: "id"
+				// Leaf parameter, slashes are prohibited
+				idx := strings.IndexByte(elem, '/')
+				if idx >= 0 {
+					break
+				}
+				args[0] = elem
+				elem = ""
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch r.Method {
+					case "GET":
+						s.handleGetProductRequest([1]string{
+							args[0],
+						}, elemIsEscaped, w, r)
+					default:
+						s.notAllowed(w, r, notAllowedParams{
+							allowedMethods: "GET",
+							allowedHeaders: nil,
+							acceptPost:     "",
+							acceptPatch:    "",
+						})
+					}
+
+					return
+				}
+
 			}
 
 		}
@@ -177,38 +197,64 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 			break
 		}
 		switch elem[0] {
-		case '/': // Prefix: "/hello/"
+		case '/': // Prefix: "/products"
 
-			if l := len("/hello/"); len(elem) >= l && elem[0:l] == "/hello/" {
+			if l := len("/products"); len(elem) >= l && elem[0:l] == "/products" {
 				elem = elem[l:]
 			} else {
 				break
 			}
 
-			// Param: "name"
-			// Leaf parameter, slashes are prohibited
-			idx := strings.IndexByte(elem, '/')
-			if idx >= 0 {
-				break
-			}
-			args[0] = elem
-			elem = ""
-
 			if len(elem) == 0 {
-				// Leaf node.
 				switch method {
 				case "GET":
-					r.name = SayHelloOperation
-					r.summary = ""
-					r.operationID = "sayHello"
+					r.name = ListProductsOperation
+					r.summary = "List all products"
+					r.operationID = "listProducts"
 					r.operationGroup = ""
-					r.pathPattern = "/hello/{name}"
+					r.pathPattern = "/products"
 					r.args = args
-					r.count = 1
+					r.count = 0
 					return r, true
 				default:
 					return
 				}
+			}
+			switch elem[0] {
+			case '/': // Prefix: "/"
+
+				if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				// Param: "id"
+				// Leaf parameter, slashes are prohibited
+				idx := strings.IndexByte(elem, '/')
+				if idx >= 0 {
+					break
+				}
+				args[0] = elem
+				elem = ""
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch method {
+					case "GET":
+						r.name = GetProductOperation
+						r.summary = "Get a product by ID"
+						r.operationID = "getProduct"
+						r.operationGroup = ""
+						r.pathPattern = "/products/{id}"
+						r.args = args
+						r.count = 1
+						return r, true
+					default:
+						return
+					}
+				}
+
 			}
 
 		}

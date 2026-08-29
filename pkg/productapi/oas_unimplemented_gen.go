@@ -13,12 +13,21 @@ type UnimplementedHandler struct{}
 
 var _ Handler = UnimplementedHandler{}
 
-// SayHello implements sayHello operation.
+// GetProduct implements getProduct operation.
 //
-// Say hello.
+// Get a product by ID.
 //
-// GET /hello/{name}
-func (UnimplementedHandler) SayHello(ctx context.Context, params SayHelloParams) (r *Message, _ error) {
+// GET /products/{id}
+func (UnimplementedHandler) GetProduct(ctx context.Context, params GetProductParams) (r GetProductRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListProducts implements listProducts operation.
+//
+// List all products.
+//
+// GET /products
+func (UnimplementedHandler) ListProducts(ctx context.Context) (r []Product, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

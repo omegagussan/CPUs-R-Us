@@ -12,7 +12,6 @@ import (
 	"github.com/go-faster/errors"
 	"github.com/ogen-go/ogen/conv"
 	ht "github.com/ogen-go/ogen/http"
-	"github.com/ogen-go/ogen/ogenerrors"
 	"github.com/ogen-go/ogen/otelogen"
 	"github.com/ogen-go/ogen/uri"
 	"go.opentelemetry.io/otel/attribute"
@@ -29,23 +28,28 @@ func trimTrailingSlashes(u *url.URL) {
 
 // Invoker invokes operations described by OpenAPI v3 specification.
 type Invoker interface {
-	// SayHello invokes sayHello operation.
+	// GetProduct invokes getProduct operation.
 	//
-	// Say hello.
+	// Get a product by ID.
 	//
-	// GET /hello/{name}
-	SayHello(ctx context.Context, params SayHelloParams) (*Message, error)
+	// GET /products/{id}
+	GetProduct(ctx context.Context, params GetProductParams) (GetProductRes, error)
+	// ListProducts invokes listProducts operation.
+	//
+	// List all products.
+	//
+	// GET /products
+	ListProducts(ctx context.Context) ([]Product, error)
 }
 
 // Client implements OAS client.
 type Client struct {
 	serverURL *url.URL
-	sec       SecuritySource
 	baseClient
 }
 
 // NewClient initializes new Client defined by OAS.
-func NewClient(serverURL string, sec SecuritySource, opts ...ClientOption) (*Client, error) {
+func NewClient(serverURL string, opts ...ClientOption) (*Client, error) {
 	u, err := url.Parse(serverURL)
 	if err != nil {
 		return nil, err
@@ -58,7 +62,6 @@ func NewClient(serverURL string, sec SecuritySource, opts ...ClientOption) (*Cli
 	}
 	return &Client{
 		serverURL:  u,
-		sec:        sec,
 		baseClient: c,
 	}, nil
 }
@@ -78,21 +81,21 @@ func (c *Client) requestURL(ctx context.Context) *url.URL {
 	return u
 }
 
-// SayHello invokes sayHello operation.
+// GetProduct invokes getProduct operation.
 //
-// Say hello.
+// Get a product by ID.
 //
-// GET /hello/{name}
-func (c *Client) SayHello(ctx context.Context, params SayHelloParams) (*Message, error) {
-	res, err := c.sendSayHello(ctx, params)
+// GET /products/{id}
+func (c *Client) GetProduct(ctx context.Context, params GetProductParams) (GetProductRes, error) {
+	res, err := c.sendGetProduct(ctx, params)
 	return res, err
 }
 
-func (c *Client) sendSayHello(ctx context.Context, params SayHelloParams) (res *Message, err error) {
+func (c *Client) sendGetProduct(ctx context.Context, params GetProductParams) (res GetProductRes, err error) {
 	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("sayHello"),
+		otelogen.OperationID("getProduct"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/hello/{name}"),
+		semconv.URLTemplateKey.String("/products/{id}"),
 	}
 	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
@@ -108,7 +111,7 @@ func (c *Client) sendSayHello(ctx context.Context, params SayHelloParams) (res *
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, SayHelloOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, GetProductOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -126,16 +129,16 @@ func (c *Client) sendSayHello(ctx context.Context, params SayHelloParams) (res *
 	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
-	pathParts[0] = "/hello/"
+	pathParts[0] = "/products/"
 	{
-		// Encode "name" parameter.
+		// Encode "id" parameter.
 		e := uri.NewPathEncoder(uri.PathEncoderConfig{
-			Param:   "name",
+			Param:   "id",
 			Style:   uri.PathStyleSimple,
 			Explode: false,
 		})
 		if err := func() error {
-			return e.EncodeValue(conv.StringToString(params.Name))
+			return e.EncodeValue(conv.StringToString(params.ID))
 		}(); err != nil {
 			return res, errors.Wrap(err, "encode path")
 		}
@@ -153,37 +156,84 @@ func (c *Client) sendSayHello(ctx context.Context, params SayHelloParams) (res *
 		return res, errors.Wrap(err, "create request")
 	}
 
-	{
-		type bitset = [1]uint8
-		var satisfied bitset
-		{
-			stage = "Security:ApiKeyAuth"
-			switch err := c.securityApiKeyAuth(ctx, SayHelloOperation, r); {
-			case err == nil: // if NO error
-				satisfied[0] |= 1 << 0
-			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
-				// Skip this security.
-			default:
-				return res, errors.Wrap(err, "security \"ApiKeyAuth\"")
-			}
-		}
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
-		if ok := func() bool {
-		nextRequirement:
-			for _, requirement := range []bitset{
-				{0b00000001},
-			} {
-				for i, mask := range requirement {
-					if satisfied[i]&mask != mask {
-						continue nextRequirement
-					}
-				}
-				return true
-			}
-			return false
-		}(); !ok {
-			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+	stage = "DecodeResponse"
+	result, err := decodeGetProductResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListProducts invokes listProducts operation.
+//
+// List all products.
+//
+// GET /products
+func (c *Client) ListProducts(ctx context.Context) ([]Product, error) {
+	res, err := c.sendListProducts(ctx)
+	return res, err
+}
+
+func (c *Client) sendListProducts(ctx context.Context) (res []Product, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listProducts"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/products"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListProductsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/products"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
 	}
 
 	stage = "SendRequest"
@@ -201,7 +251,7 @@ func (c *Client) sendSayHello(ctx context.Context, params SayHelloParams) (res *
 	}()
 
 	stage = "DecodeResponse"
-	result, err := decodeSayHelloResponse(resp)
+	result, err := decodeListProductsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

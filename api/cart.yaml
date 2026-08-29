@@ -1,0 +1,232 @@
+openapi: 3.0.3
+info:
+  title: Cart API
+  description: API exposing shopping cart functionality for CPUs-R-Us.
+  version: 0.1.0
+
+components:
+  schemas:
+    Product:
+      type: object
+      required:
+        - id
+        - name
+        - price
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+          format: double
+
+    CartItem:
+      type: object
+      required:
+        - product_id
+        - quantity
+        - subtotal
+      properties:
+        product_id:
+          type: string
+          description: Unique identifier of the product.
+        quantity:
+          type: integer
+          description: Quantity of the product in the cart.
+        product:
+          $ref: "#/components/schemas/Product"
+          description: Detailed product data retrieved from the Product API.
+        subtotal:
+          type: number
+          format: double
+          description: Subtotal price for this item (quantity * price).
+
+    Cart:
+      type: object
+      required:
+        - items
+        - total_price
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItem"
+        total_price:
+          type: number
+          format: double
+          description: Total price of all products in the cart.
+
+    AddCartItemRequest:
+      type: object
+      required:
+        - product_id
+        - quantity
+      properties:
+        product_id:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+
+    UpdateCartItemRequest:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+          minimum: 0
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+
+  parameters:
+    UserIdHeader:
+      name: X-User-Id
+      in: header
+      required: true
+      schema:
+        type: string
+      description: The ID of the current user.
+
+paths:
+  /cart:
+    get:
+      summary: Get the current user's cart
+      operationId: getCart
+      parameters:
+        - $ref: "#/components/parameters/UserIdHeader"
+      responses:
+        "200":
+          description: The user's cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Clear the current user's cart
+      operationId: clearCart
+      parameters:
+        - $ref: "#/components/parameters/UserIdHeader"
+      responses:
+        "200":
+          description: The cleared cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /cart/items:
+    post:
+      summary: Add an item to the cart
+      operationId: addCartItem
+      parameters:
+        - $ref: "#/components/parameters/UserIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCartItemRequest"
+      responses:
+        "200":
+          description: The updated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+        "400":
+          description: Invalid request or product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /cart/items/{product_id}:
+    put:
+      summary: Update the quantity of an item in the cart
+      operationId: updateCartItem
+      parameters:
+        - $ref: "#/components/parameters/UserIdHeader"
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCartItemRequest"
+      responses:
+        "200":
+          description: The updated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      summary: Remove an item from the cart
+      operationId: removeCartItem
+      parameters:
+        - $ref: "#/components/parameters/UserIdHeader"
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The updated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"

@@ -14,25 +14,25 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
-// SayHelloParams is parameters of sayHello operation.
-type SayHelloParams struct {
-	// Name of the individual to say hello to.
-	Name string
+// GetProductParams is parameters of getProduct operation.
+type GetProductParams struct {
+	// The product ID.
+	ID string
 }
 
-func unpackSayHelloParams(packed middleware.Parameters) (params SayHelloParams) {
+func unpackGetProductParams(packed middleware.Parameters) (params GetProductParams) {
 	{
 		key := middleware.ParameterKey{
-			Name: "name",
+			Name: "id",
 			In:   "path",
 		}
-		params.Name = packed[key].(string)
+		params.ID = packed[key].(string)
 	}
 	return params
 }
 
-func decodeSayHelloParams(args [1]string, argsEscaped bool, r *http.Request) (params SayHelloParams, _ error) {
-	// Decode path: name.
+func decodeGetProductParams(args [1]string, argsEscaped bool, r *http.Request) (params GetProductParams, _ error) {
+	// Decode path: id.
 	if err := func() error {
 		param := args[0]
 		if argsEscaped {
@@ -44,7 +44,7 @@ func decodeSayHelloParams(args [1]string, argsEscaped bool, r *http.Request) (pa
 		}
 		if len(param) > 0 {
 			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "name",
+				Param:   "id",
 				Value:   param,
 				Style:   uri.PathStyleSimple,
 				Explode: false,
@@ -61,7 +61,7 @@ func decodeSayHelloParams(args [1]string, argsEscaped bool, r *http.Request) (pa
 					return err
 				}
 
-				params.Name = c
+				params.ID = c
 				return nil
 			}(); err != nil {
 				return err
@@ -72,7 +72,7 @@ func decodeSayHelloParams(args [1]string, argsEscaped bool, r *http.Request) (pa
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "name",
+			Name: "id",
 			In:   "path",
 			Err:  err,
 		}
