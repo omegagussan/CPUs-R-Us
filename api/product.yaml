@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Product API
   description: API hosting the products available for CPUs-R-Us.
-  version: 0.1.0
+  version: 1.0.0
 
 components:
   schemas:
@@ -15,6 +15,7 @@ components:
       properties:
         id:
           type: string
+          format: uuid
           description: Unique identifier of the product.
         name:
           type: string
@@ -67,6 +68,7 @@ paths:
           description: The product ID
           schema:
             type: string
+            format: uuid
       responses:
         "200":
           description: Product details

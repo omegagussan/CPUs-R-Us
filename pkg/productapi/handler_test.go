@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 func TestProductHandler_ListProducts(t *testing.T) {
@@ -18,10 +20,10 @@ func TestProductHandler_ListProducts(t *testing.T) {
 		t.Errorf("expected 3 products, got %d", len(products))
 	}
 
-	expectedIDs := map[string]bool{
-		"floppy-disk":       true,
-		"pager":             true,
-		"laser-disk-player": true,
+	expectedIDs := map[uuid.UUID]bool{
+		FloppyDiskID:      true,
+		PagerID:           true,
+		LaserDiskPlayerID: true,
 	}
 
 	for _, p := range products {
@@ -35,7 +37,7 @@ func TestProductHandler_GetProduct_Success(t *testing.T) {
 	ctx := context.Background()
 	handler := NewProductHandler()
 
-	res, err := handler.GetProduct(ctx, GetProductParams{ID: "pager"})
+	res, err := handler.GetProduct(ctx, GetProductParams{ID: PagerID})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -54,7 +56,8 @@ func TestProductHandler_GetProduct_NotFound(t *testing.T) {
 	ctx := context.Background()
 	handler := NewProductHandler()
 
-	res, err := handler.GetProduct(ctx, GetProductParams{ID: "non-existent"})
+	nonExistent := uuid.New()
+	res, err := handler.GetProduct(ctx, GetProductParams{ID: nonExistent})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

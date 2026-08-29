@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	productapi "github.com/omegagussan/cpus-r-us/pkg/productapi"
 )
 
@@ -101,8 +102,8 @@ func TestCartHandler_GetCart(t *testing.T) {
 
 	// 2. Add an item manually to the in-memory map
 	handler.mu.Lock()
-	handler.carts[userID] = map[string]int{
-		"floppy-disk": 3,
+	handler.carts[userID] = map[uuid.UUID]int{
+		productapi.FloppyDiskID: 3,
 	}
 	handler.mu.Unlock()
 
@@ -115,7 +116,7 @@ func TestCartHandler_GetCart(t *testing.T) {
 		t.Fatalf("expected 1 item, got %d", len(cart.Items))
 	}
 	item := cart.Items[0]
-	if item.ProductID != "floppy-disk" || item.Quantity != 3 || item.Subtotal != 30.0 {
+	if item.ProductID != productapi.FloppyDiskID || item.Quantity != 3 || item.Subtotal != 30.0 {
 		t.Errorf("unexpected item state: %+v", item)
 	}
 	if cart.TotalPrice != 30.0 {
@@ -148,7 +149,7 @@ func TestCartHandler_AddCartItem_Validation(t *testing.T) {
 
 	// 1. Add valid product
 	res, err := handler.AddCartItem(ctx, &AddCartItemRequest{
-		ProductID: "pager",
+		ProductID: productapi.PagerID,
 		Quantity:  2,
 	}, AddCartItemParams{XUserID: userID})
 	if err != nil {
@@ -159,13 +160,14 @@ func TestCartHandler_AddCartItem_Validation(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected *Cart response, got %T", res)
 	}
-	if len(cart.Items) != 1 || cart.Items[0].ProductID != "pager" || cart.Items[0].Quantity != 2 {
+	if len(cart.Items) != 1 || cart.Items[0].ProductID != productapi.PagerID || cart.Items[0].Quantity != 2 {
 		t.Errorf("unexpected cart state: %+v", cart)
 	}
 
 	// 2. Add invalid product (should fail validation)
+	invalidID := uuid.New()
 	resErr, err := handler.AddCartItem(ctx, &AddCartItemRequest{
-		ProductID: "invalid-id",
+		ProductID: invalidID,
 		Quantity:  1,
 	}, AddCartItemParams{XUserID: userID})
 	if err != nil {

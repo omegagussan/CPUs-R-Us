@@ -7,18 +7,19 @@ import (
 	"sync"
 
 	"github.com/go-faster/errors"
+	"github.com/google/uuid"
 	productapi "github.com/omegagussan/cpus-r-us/pkg/productapi"
 )
 
 type CartHandler struct {
 	mu            sync.RWMutex
-	carts         map[string]map[string]int // userID -> productID -> quantity
+	carts         map[string]map[uuid.UUID]int // userID -> productID -> quantity
 	productClient *productapi.Client
 }
 
 func NewCartHandler(productClient *productapi.Client) *CartHandler {
 	return &CartHandler{
-		carts:         make(map[string]map[string]int),
+		carts:         make(map[string]map[uuid.UUID]int),
 		productClient: productClient,
 	}
 }
@@ -44,7 +45,7 @@ func (h *CartHandler) resolveCart(ctx context.Context, userID string) (*Cart, er
 		return nil, errors.Wrap(err, "failed to list products from Product API")
 	}
 
-	prodMap := make(map[string]productapi.Product)
+	prodMap := make(map[uuid.UUID]productapi.Product)
 	for _, p := range products {
 		prodMap[p.ID] = p
 	}
@@ -54,7 +55,7 @@ func (h *CartHandler) resolveCart(ctx context.Context, userID string) (*Cart, er
 
 	// Gather pairs and sort them to ensure deterministic listing order.
 	type itemPair struct {
-		productID string
+		productID uuid.UUID
 		quantity  int
 	}
 	var pairs []itemPair
@@ -67,7 +68,7 @@ func (h *CartHandler) resolveCart(ctx context.Context, userID string) (*Cart, er
 	h.mu.RUnlock()
 
 	sort.Slice(pairs, func(i, j int) bool {
-		return pairs[i].productID < pairs[j].productID
+		return pairs[i].productID.String() < pairs[j].productID.String()
 	})
 
 	for _, pair := range pairs {
@@ -137,7 +138,7 @@ func (h *CartHandler) AddCartItem(ctx context.Context, req *AddCartItemRequest, 
 	case *productapi.Error:
 		return &Error{
 			Code:    http.StatusBadRequest,
-			Message: "product " + req.ProductID + " does not exist",
+			Message: "product " + req.ProductID.String() + " does not exist",
 		}, nil
 	default:
 		return &Error{
@@ -149,11 +150,11 @@ func (h *CartHandler) AddCartItem(ctx context.Context, req *AddCartItemRequest, 
 	// 2. Add or increment the quantity of the product.
 	h.mu.Lock()
 	if h.carts == nil {
-		h.carts = make(map[string]map[string]int)
+		h.carts = make(map[string]map[uuid.UUID]int)
 	}
 	userCart, ok := h.carts[params.XUserID]
 	if !ok {
-		userCart = make(map[string]int)
+		userCart = make(map[uuid.UUID]int)
 		h.carts[params.XUserID] = userCart
 	}
 	userCart[req.ProductID] += req.Quantity
@@ -207,7 +208,7 @@ func (h *CartHandler) UpdateCartItem(ctx context.Context, req *UpdateCartItemReq
 	case *productapi.Error:
 		return &Error{
 			Code:    http.StatusBadRequest,
-			Message: "product " + params.ProductID + " does not exist",
+			Message: "product " + params.ProductID.String() + " does not exist",
 		}, nil
 	default:
 		return &Error{
@@ -219,11 +220,11 @@ func (h *CartHandler) UpdateCartItem(ctx context.Context, req *UpdateCartItemReq
 	// Set the new quantity.
 	h.mu.Lock()
 	if h.carts == nil {
-		h.carts = make(map[string]map[string]int)
+		h.carts = make(map[string]map[uuid.UUID]int)
 	}
 	userCart, ok := h.carts[params.XUserID]
 	if !ok {
-		userCart = make(map[string]int)
+		userCart = make(map[uuid.UUID]int)
 		h.carts[params.XUserID] = userCart
 	}
 	userCart[params.ProductID] = req.Quantity
