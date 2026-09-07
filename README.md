@@ -72,16 +72,28 @@ go test -v ./...
 
 ---
 
+## 📋 TODO
+
+* **Dockerize Microservices**: Containerize the microservices for deployment. Since Go compiles into standalone binaries, a common base image (or multi-stage Docker build pattern) can be shared across all microservices.
+
+---
+
 ## 🤖 Instructions for Future AI Tools
 
 When modifying or extending this codebase, future AI developers must adhere to the following conventions:
 
-1. **API Specifications**: All endpoint and schema additions must first be declared in [api/product.yaml](file:///home/gussan/GolandProjects/CPUs-R-Us/api/product.yaml) or [api/cart.yaml](file:///home/gussan/GolandProjects/CPUs-R-Us/api/cart.yaml).
-2. **Code Generation**: After updating any specification files, regenerate the client/server code using:
+1. **AI Tooling & Setup**: This project was built and maintained using **Google Antigravity (`agy`)**, an agentic AI coding assistant environment, operating on a Go multi-microservice project setup.
+2. **Tooling & Tech Stack**:
+   - **Language / Runtime**: Go (`1.26+`)
+   - **OpenAPI Code Generation**: `ogen` (`github.com/ogen-go/ogen`), generating type-safe HTTP server handlers, request/response decoders, and clients from OpenAPI v3 YAML contracts.
+   - **Telemetry**: OpenTelemetry (`go.opentelemetry.io/otel`) integrated via `ogen`.
+   - **Testing Framework**: Go standard library `testing` and `net/http/httptest` for modular unit tests and fast in-memory E2E integration tests.
+3. **API Specifications**: All endpoint and schema additions must first be declared in [api/product.yaml](file:///home/gussan/GolandProjects/CPUs-R-Us/api/product.yaml) or [api/cart.yaml](file:///home/gussan/GolandProjects/CPUs-R-Us/api/cart.yaml).
+4. **Code Generation**: After updating any specification files, regenerate the client/server code using:
    ```bash
    go generate ./...
    ```
-3. **Modular Handlers**: Keep the server entrypoints (`cmd/**/main.go`) lean. Implement all business logic inside:
+5. **Modular Handlers**: Keep the server entrypoints (`cmd/**/main.go`) lean. Implement all business logic inside:
    - [pkg/productapi/handler.go](file:///home/gussan/GolandProjects/CPUs-R-Us/pkg/productapi/handler.go)
    - [pkg/cartapi/handler.go](file:///home/gussan/GolandProjects/CPUs-R-Us/pkg/cartapi/handler.go)
-4. **Integration/Unit Tests**: Write unit tests alongside handler code using the `_test.go` suffix. Integration/E2E test flows should be placed inside the [tests/](file:///home/gussan/GolandProjects/CPUs-R-Us/tests) package. All tests must be runnable via `go test -v ./...`.
+6. **Integration/Unit Tests**: Write unit tests alongside handler code using the `_test.go` suffix. Integration/E2E test flows should be placed inside the [tests/](file:///home/gussan/GolandProjects/CPUs-R-Us/tests) package. All tests must be runnable via `go test -v ./...`.

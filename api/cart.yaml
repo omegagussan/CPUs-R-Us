@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Cart API
   description: API exposing shopping cart functionality for CPUs-R-Us.
-  version: 0.1.0
+  version: 1.0.0
 
 components:
   schemas:

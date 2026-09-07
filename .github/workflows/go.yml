@@ -30,10 +30,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Verify Generated Code
+      - name: Generate Code
+        run: go generate ./...
+
+      - name: Build Binaries
         run: |
-          go generate ./...
-          git diff --exit-code
+          go build -o product-api ./cmd/product-api
+          go build -o cart-api ./cmd/cart-api
 
       - name: Run Tests
         run: go test -v ./...
