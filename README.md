@@ -66,7 +66,7 @@ go test -v ./...
 * **AI Tooling Beyond Copilot & Claude**: Setting up agentic AI coding tools outside of traditional in-editor Copilot or standard Claude web chats was a great new experience. AI developer tooling is becoming a true commodity, proving that you can get very far with high-level architecture, scaffolding, and testing using basic token usage.
 
 ### 3. What could be improved or extended?
-* **Database Persistence**: Replace the in-memory maps with a persistent store like Redis or PostgreSQL.
+* **Database Persistence**: Replace the in-memory maps with a persistent store like Redis, PostgreSQL or honestly just some KV-store. As we don't really need to search, retrievals will be easily handled by ID anyhow and we can scale out application with hosted solution on some of the cloud vendors. Usually comes with IAM permissions out of the box which will play nicely with us hosting the application within the same cloud ecosystem. 
 * **Authentication**: Enforce security tokens (e.g., JWT) rather than allowing plain `X-User-Id` request headers.
 * **Resilience**: Wrap Product API client requests inside a circuit breaker or retry mechanism to handle transient network issues gracefully.
 * **Dockerize Microservices**: Containerize the microservices for deployment. Since Go compiles into standalone binaries, a common base image (or multi-stage Docker build pattern) can be shared across all microservices.
