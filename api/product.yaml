@@ -4,6 +4,10 @@ info:
   description: API hosting the products available for CPUs-R-Us.
   version: 1.0.0
 
+servers:
+  - url: /v1
+    description: Production & Local v1 API root path
+
 components:
   schemas:
     Product:

@@ -33,6 +33,18 @@ jobs:
       - name: Generate Code
         run: go generate ./...
 
+      - name: Verify Code Drift
+        run: git diff --exit-code
+
+      - name: Install oasdiff
+        run: go install github.com/tufin/oasdiff@latest
+
+      - name: Check Breaking API Changes
+        if: github.event_name == 'pull_request'
+        run: |
+          oasdiff breaking origin/main api/product.yaml
+          oasdiff breaking origin/main api/cart.yaml
+
       - name: Build Binaries
         run: |
           go build -o product-api ./cmd/product-api
