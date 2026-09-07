@@ -37,7 +37,7 @@ jobs:
         run: git diff --exit-code
 
       - name: Install oasdiff
-        run: go install github.com/tufin/oasdiff@latest
+        run: go install github.com/oasdiff/oasdiff@latest
 
       - name: Check Breaking API Changes
         if: github.event_name == 'pull_request'
