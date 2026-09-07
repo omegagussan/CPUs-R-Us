@@ -46,6 +46,7 @@ func TestIntegration(t *testing.T) {
 	userID := "test-user-1"
 	floppyID := productapi.FloppyDiskID
 	pagerID := productapi.PagerID
+	utils := TestUtils{}
 
 	// Case A: Get cart for new user (should be empty).
 	t.Run("GetEmptyCart", func(t *testing.T) {
@@ -53,12 +54,8 @@ func TestIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if len(cart.Items) != 0 {
-			t.Errorf("expected empty cart, got %d items", len(cart.Items))
-		}
-		if cart.TotalPrice != 0.0 {
-			t.Errorf("expected total price 0.0, got %f", cart.TotalPrice)
-		}
+		expectedCart := utils.NewCart(0.0)
+		utils.AssertCartEqual(t, cart, expectedCart)
 	})
 
 	// Case B: Add product "floppy-disk" (quantity: 2, price: 10 each, subtotal: 20).
@@ -79,30 +76,10 @@ func TestIntegration(t *testing.T) {
 			t.Fatalf("unexpected response type: %T", res)
 		}
 
-		if len(cart.Items) != 1 {
-			t.Fatalf("expected 1 item, got %d", len(cart.Items))
-		}
-		item := cart.Items[0]
-		if item.ProductID != floppyID {
-			t.Errorf("expected floppy-disk ID, got %s", item.ProductID)
-		}
-		if item.Quantity != 2 {
-			t.Errorf("expected quantity 2, got %d", item.Quantity)
-		}
-		if !item.Product.Set {
-			t.Errorf("expected product to be set")
-		} else {
-			prod := item.Product.Value
-			if prod.ID != floppyID || prod.Name != "Floppy disk" || prod.Price != 10.0 {
-				t.Errorf("incorrect product details: %+v", prod)
-			}
-		}
-		if item.Subtotal != 20.0 {
-			t.Errorf("expected subtotal 20.0, got %f", item.Subtotal)
-		}
-		if cart.TotalPrice != 20.0 {
-			t.Errorf("expected total price 20.0, got %f", cart.TotalPrice)
-		}
+		expectedCart := utils.NewCart(20.0,
+			utils.NewCartItem(floppyID, 2, "Floppy disk", 10.0),
+		)
+		utils.AssertCartEqual(t, cart, expectedCart)
 	})
 
 	// Case C: Add product "pager" (quantity: 1, price: 20, total: 40).
@@ -120,12 +97,11 @@ func TestIntegration(t *testing.T) {
 			t.Fatalf("unexpected response type: %T", res)
 		}
 
-		if len(cart.Items) != 2 {
-			t.Fatalf("expected 2 items, got %d", len(cart.Items))
-		}
-		if cart.TotalPrice != 40.0 {
-			t.Errorf("expected total price 40.0, got %f", cart.TotalPrice)
-		}
+		expectedCart := utils.NewCart(40.0,
+			utils.NewCartItem(floppyID, 2, "Floppy disk", 10.0),
+			utils.NewCartItem(pagerID, 1, "Pager", 20.0),
+		)
+		utils.AssertCartEqual(t, cart, expectedCart)
 	})
 
 	// Case D: Try to add non-existent product (should return 400 Bad Request).
@@ -164,26 +140,11 @@ func TestIntegration(t *testing.T) {
 			t.Fatalf("unexpected response type: %T", res)
 		}
 
-		if len(cart.Items) != 2 {
-			t.Fatalf("expected 2 items, got %d", len(cart.Items))
-		}
-		// Find the floppy disk item
-		var fdItem *cartapi.CartItem
-		for i := range cart.Items {
-			if cart.Items[i].ProductID == floppyID {
-				fdItem = &cart.Items[i]
-				break
-			}
-		}
-		if fdItem == nil {
-			t.Fatalf("floppy disk not found in cart")
-		}
-		if fdItem.Quantity != 5 || fdItem.Subtotal != 50.0 {
-			t.Errorf("unexpected floppy disk state: %+v", fdItem)
-		}
-		if cart.TotalPrice != 70.0 {
-			t.Errorf("expected total price 70.0, got %f", cart.TotalPrice)
-		}
+		expectedCart := utils.NewCart(70.0,
+			utils.NewCartItem(floppyID, 5, "Floppy disk", 10.0),
+			utils.NewCartItem(pagerID, 1, "Pager", 20.0),
+		)
+		utils.AssertCartEqual(t, cart, expectedCart)
 	})
 
 	// Case F: Delete pager from cart (only floppy-disk left, total: 50).
@@ -196,15 +157,10 @@ func TestIntegration(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if len(cart.Items) != 1 {
-			t.Fatalf("expected 1 item left, got %d", len(cart.Items))
-		}
-		if cart.Items[0].ProductID != floppyID {
-			t.Errorf("expected floppy-disk left, got %s", cart.Items[0].ProductID)
-		}
-		if cart.TotalPrice != 50.0 {
-			t.Errorf("expected total price 50.0, got %f", cart.TotalPrice)
-		}
+		expectedCart := utils.NewCart(50.0,
+			utils.NewCartItem(floppyID, 5, "Floppy disk", 10.0),
+		)
+		utils.AssertCartEqual(t, cart, expectedCart)
 	})
 
 	// Case G: Clear cart (items: [], total: 0).
@@ -214,11 +170,7 @@ func TestIntegration(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if len(cart.Items) != 0 {
-			t.Errorf("expected empty cart, got %d items", len(cart.Items))
-		}
-		if cart.TotalPrice != 0.0 {
-			t.Errorf("expected total price 0.0, got %f", cart.TotalPrice)
-		}
+		expectedCart := utils.NewCart(0.0)
+		utils.AssertCartEqual(t, cart, expectedCart)
 	})
 }
