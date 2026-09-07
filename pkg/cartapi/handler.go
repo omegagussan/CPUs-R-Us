@@ -27,12 +27,25 @@ func NewCartHandler(productClient *productapi.Client) *CartHandler {
 // resolveCart fetches product details from the Product API and resolves
 // the full Cart details including titles, individual prices, subtotals, and total price.
 func (h *CartHandler) resolveCart(ctx context.Context, userID string) (*Cart, error) {
+	type itemPair struct {
+		productID uuid.UUID
+		quantity  int
+	}
+	var pairs []itemPair
+
 	h.mu.RLock()
 	userCart, ok := h.carts[userID]
+	if ok && len(userCart) > 0 {
+		for pid, qty := range userCart {
+			if qty > 0 {
+				pairs = append(pairs, itemPair{pid, qty})
+			}
+		}
+	}
 	h.mu.RUnlock()
 
 	// If the user does not have a cart or it is empty, return an empty cart object.
-	if !ok || len(userCart) == 0 {
+	if len(pairs) == 0 {
 		return &Cart{
 			Items:      []CartItem{},
 			TotalPrice: 0.0,
@@ -52,20 +65,6 @@ func (h *CartHandler) resolveCart(ctx context.Context, userID string) (*Cart, er
 
 	var items []CartItem
 	var totalPrice float64
-
-	// Gather pairs and sort them to ensure deterministic listing order.
-	type itemPair struct {
-		productID uuid.UUID
-		quantity  int
-	}
-	var pairs []itemPair
-	h.mu.RLock()
-	for pid, qty := range userCart {
-		if qty > 0 {
-			pairs = append(pairs, itemPair{pid, qty})
-		}
-	}
-	h.mu.RUnlock()
 
 	sort.Slice(pairs, func(i, j int) bool {
 		return pairs[i].productID.String() < pairs[j].productID.String()

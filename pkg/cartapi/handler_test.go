@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/google/uuid"
@@ -180,5 +181,65 @@ func TestCartHandler_AddCartItem_Validation(t *testing.T) {
 	}
 	if apiErr.Code != 400 {
 		t.Errorf("expected code 400, got %d", apiErr.Code)
+	}
+}
+
+func TestCartHandler_ConcurrentReadsWrites(t *testing.T) {
+	ctx := context.Background()
+
+	prodHandler := productapi.NewProductHandler()
+	prodSrv, err := productapi.NewServer(prodHandler)
+	if err != nil {
+		t.Fatalf("failed to create product server: %v", err)
+	}
+	prodTestSrv := httptest.NewServer(prodSrv)
+	defer prodTestSrv.Close()
+
+	prodClient, err := productapi.NewClient(prodTestSrv.URL)
+	if err != nil {
+		t.Fatalf("failed to create product client: %v", err)
+	}
+
+	handler := NewCartHandler(prodClient)
+	userID := "concurrent-user"
+
+	const goroutines = 20
+	const iterations = 50
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines * 2)
+
+	// Concurrent writers
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < iterations; j++ {
+				_, _ = handler.AddCartItem(ctx, &AddCartItemRequest{
+					ProductID: productapi.FloppyDiskID,
+					Quantity:  1,
+				}, AddCartItemParams{XUserID: userID})
+			}
+		}()
+	}
+
+	// Concurrent readers
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < iterations; j++ {
+				_, _ = handler.GetCart(ctx, GetCartParams{XUserID: userID})
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	cart, err := handler.GetCart(ctx, GetCartParams{XUserID: userID})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expectedQuantity := goroutines * iterations
+	if len(cart.Items) != 1 || cart.Items[0].Quantity != expectedQuantity {
+		t.Errorf("expected item quantity %d, got %+v", expectedQuantity, cart)
 	}
 }
