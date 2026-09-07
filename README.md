@@ -63,6 +63,7 @@ go test -v ./...
 ### 2. What was interesting about the assignment?
 * **In-Memory E2E Testing**: Running real HTTP servers on arbitrary ports using `httptest.NewServer` for *both* services allowed us to test preflights, serialization, and service-to-service calls end-to-end in just 6 milliseconds.
 * **Type-Safe Client Testing**: Testing the servers via their own generated clients instead of using low-level raw HTTP request payloads made the test assertions type-safe, simple, and self-documenting.
+* **AI Tooling Beyond Copilot & Claude**: Setting up agentic AI coding tools outside of traditional in-editor Copilot or standard Claude web chats was a great new experience. AI developer tooling is becoming a true commodity, proving that you can get very far with high-level architecture, scaffolding, and testing using basic token usage.
 
 ### 3. What could be improved or extended?
 * **Database Persistence**: Replace the in-memory maps with a persistent store like Redis or PostgreSQL.
