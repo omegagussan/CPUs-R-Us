@@ -45,6 +45,19 @@ curl -s -H "X-User-Id: user-1" http://localhost:8082/cart
 
 ---
 
+## 🛠️ Tech Stack Rationale
+
+When selecting the language and runtime for this PoC microservice backend, several alternatives were evaluated:
+
+* **Java**: Although the most familiar language after years of experience, the JVM's heavy runtime footprint and warm-up overhead feel less optimal for modern, lightweight microservices.
+* **TypeScript**: A strong contender with type safety and zero JVM warm-up time, but the rapidly moving ecosystem often requires more maintenance overhead than justified for a focused task of this scope.
+* **Python (FastAPI)**: Another compelling option due to smooth typing support and fast development velocity, but package manager friction ultimately tipped the scales away.
+
+### Why Go Won 🏆
+Go compiles into a **single static binary executable** packaging all dependencies. This makes container deployment into minimal base images effortless without interpreters or heavy runtimes slowing down startup. Although the syntax can occasionally feel verbose, the advantages of high performance, sub-millisecond startup times, and a straightforward distribution model made Go the ideal choice.
+
+---
+
 ## 🧪 Running Tests
 
 You can run both unit tests and end-to-end integration tests using standard Go tools:
