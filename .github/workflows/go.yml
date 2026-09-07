@@ -36,14 +36,23 @@ jobs:
       - name: Verify Code Drift
         run: git diff --exit-code
 
-      - name: Install oasdiff
-        run: go install github.com/oasdiff/oasdiff@latest
-
-      - name: Check Breaking API Changes
+      - name: Fetch base branch for diffing
         if: github.event_name == 'pull_request'
-        run: |
-          oasdiff breaking origin/main api/product.yaml
-          oasdiff breaking origin/main api/cart.yaml
+        run: git fetch --depth=1 origin ${{ github.base_ref }}
+
+      - name: Check Breaking API Changes (Product API)
+        if: github.event_name == 'pull_request'
+        uses: oasdiff/oasdiff-action/breaking@v0
+        with:
+          base: 'origin/${{ github.base_ref }}:api/product.yaml'
+          revision: 'HEAD:api/product.yaml'
+
+      - name: Check Breaking API Changes (Cart API)
+        if: github.event_name == 'pull_request'
+        uses: oasdiff/oasdiff-action/breaking@v0
+        with:
+          base: 'origin/${{ github.base_ref }}:api/cart.yaml'
+          revision: 'HEAD:api/cart.yaml'
 
       - name: Build Binaries
         run: |
