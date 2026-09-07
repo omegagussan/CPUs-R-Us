@@ -68,14 +68,9 @@ go test -v ./...
 * **Database Persistence**: Replace the in-memory maps with a persistent store like Redis or PostgreSQL.
 * **Authentication**: Enforce security tokens (e.g., JWT) rather than allowing plain `X-User-Id` request headers.
 * **Resilience**: Wrap Product API client requests inside a circuit breaker or retry mechanism to handle transient network issues gracefully.
+* **Dockerize Microservices**: Containerize the microservices for deployment. Since Go compiles into standalone binaries, a common base image (or multi-stage Docker build pattern) can be shared across all microservices.
 * **Shared OpenAPI Specifications**: Keep common schemas (such as the `Product` definition) in a single shared yaml file and reference it to prevent duplication between `product.yaml` and `cart.yaml`.
 * **Repository Architecture & Rolling Deployments**: `Cart API` depends on `Product API`. While this project is currently built as a monorepo in GitHub for convenience, maintaining one deployable entity per repository is generally preferred in production. Monorepo setups make it easy to bundle breaking changes together without enforcing strict API backward compatibility. During rolling deployments, if an older pod of `Product API` is still active while a newer version of `Cart API` attempts to consume it, runtime incompatibility issues can easily arise.
-
----
-
-## 📋 TODO
-
-* **Dockerize Microservices**: Containerize the microservices for deployment. Since Go compiles into standalone binaries, a common base image (or multi-stage Docker build pattern) can be shared across all microservices.
 
 ---
 
