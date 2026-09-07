@@ -72,6 +72,21 @@ go test -v ./...
 ### 1. What was challenging about the assignment?
 * **Code-Gen Namespacing**: Running the `ogen` OpenAPI generator for two separate APIs within a single Go module generates packages with overlapping names (`api` package inside each target directory). We solved this cleanly by aliasing imports in our code (e.g., `cartapi "github.com/omegagussan/cpus-r-us/pkg/cartapi"`).
 * **Decoupling for Testability**: Moving handlers out of `main.go` entrypoints and into the modular generated packages was required to test the logic cleanly using Go's `httptest` package without compiling binaries or starting external network loops.
+* **Preventing Breaking API Changes**: Guaranteeing that contract modifications in `/api/*.yaml` do not break backend handlers or clients requires a multi-layered verification pipeline combining Go compile-time checks, OpenAPI linting, and automated diffing in CI:
+
+```mermaid
+flowchart TD
+    A["Developer Edits OpenAPI Specs (api/*.yaml)"] --> B["Run Code Generation (go generate ./...)"]
+    B --> C["ogen Regenerates Go Handlers & Clients"]
+    C --> D{"Compile & Test (go build / go test)"}
+    D -- "Interface Mismatch" --> E["❌ Go Compile-Time Failure"]
+    D -- "Signature Match" --> F{"CI Pull Request Check"}
+    F --> G["Verify Code Drift (git diff --exit-code)"]
+    F --> H["Run oasdiff breaking origin/main"]
+    H -- "Breaking Schema Changes Found" --> I["❌ CI Action Blocked"]
+    G -- "Uncommitted Generated Code" --> I
+    H -- "Backward Compatible" --> J["✅ Merge Approved"]
+```
 
 ### 2. What was interesting about the assignment?
 * **In-Memory E2E Testing**: Running real HTTP servers on arbitrary ports using `httptest.NewServer` for *both* services allowed us to test preflights, serialization, and service-to-service calls end-to-end in just 6 milliseconds.
